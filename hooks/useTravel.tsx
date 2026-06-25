@@ -416,13 +416,12 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
       });
 
       dbBooking.forEach((b: any) => {
-
         const date = b.tanggal_booking ? new Date(b.tanggal_booking) : new Date();
         const monthStr = monthNames[date.getMonth()];
-        
-        const statusName = b.ref_status_booking?.nama_status?.toLowerCase() || "";
-        
-        if (statusName === "cancelled" || statusName === "batal") {
+
+        const ID_STATUS_BATAL = 3; 
+
+        if (b.status_id === ID_STATUS_BATAL) {
           trendDataMap[monthStr].cancelled++;
         } else {
           trendDataMap[monthStr].bookings++;
@@ -435,11 +434,7 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
         cancelled: trendDataMap[m].cancelled
       }));
 
-      if (dbBooking.length > 0) {
-        setBookingTrend(generatedBookingTrend);
-      } else {
-        setBookingTrend(dummy.bookingTrend);
-      }
+      setBookingTrend(generatedBookingTrend);
 
       // Destination Share
       const destCounts: Record<string, number> = {};
