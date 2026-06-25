@@ -5,6 +5,15 @@ import { createClient } from "../utils/supabase/client";
 import { destinationImages, hotelImages, avatar } from "../lib/images";
 import * as dummy from "../lib/data";
 
+interface NewCustomerInput {
+  nama_lengkap: string;
+  email: string;
+  no_hp: string;
+  tanggal_lahir: string;
+  kota: string;
+  kode_pos: string;
+}
+
 interface TravelContextType {
   customers: typeof dummy.customers;
   packages: typeof dummy.packages;
@@ -26,9 +35,13 @@ interface TravelContextType {
   recentActivities: typeof dummy.recentActivities;
   topPackages: typeof dummy.topPackages;
   bookingSummary: typeof dummy.bookingSummary;
+  kotaList: { kota_id: number; nama_kota: string }[];
   loading: boolean;
   error: any;
   refreshData: () => Promise<void>;
+  addCustomer: (data: NewCustomerInput) => Promise<{ error: any | null }>;
+  updateCustomer: (pelangganId: number, data: Partial<NewCustomerInput>) => Promise<{ error: any | null }>;
+  deleteCustomer: (pelangganId: number) => Promise<{ error: any | null }>;
 }
 
 const TravelDataContext = createContext<TravelContextType | undefined>(undefined);
@@ -46,6 +59,7 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
   const [guides, setGuides] = useState<typeof dummy.guides>(dummy.guides);
   const [promotions, setPromotions] = useState<typeof dummy.promotions>(dummy.promotions);
   const [activityLogs, setActivityLogs] = useState<typeof dummy.activityLogs>(dummy.activityLogs);
+  const [kotaList, setKotaList] = useState<{ kota_id: number; nama_kota: string }[]>([]);
 
   // Dashboards / Analytics states
   const [dashboardStats, setDashboardStats] = useState<typeof dummy.dashboardStats>(dummy.dashboardStats);
@@ -110,7 +124,8 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
         resPembayaran,
         resRefund,
         resJadwal,
-        resAudit
+        resAudit,
+        resKota
       ] = await Promise.all([
         supabase.from("m_pelanggan").select("*, ref_kota(nama_kota)"),
         supabase.from("m_paket_wisata").select("*, ref_kategori_wisata(nama_kategori)"),
@@ -123,8 +138,14 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
         supabase.from("t_pembayaran").select("*, ref_metode_pembayaran(nama_metode)"),
         supabase.from("t_refund").select("*"),
         supabase.from("t_jadwal_keberangkatan").select("*, m_paket_wisata(nama_paket), m_pemandu(nama_pemandu), m_transportasi(nama_armada)"),
-        supabase.from("t_log_audit").select("*").order("waktu_log", { ascending: false }).limit(20)
+        supabase.from("t_log_audit").select("*").order("waktu_log", { ascending: false }).limit(20),
+        supabase.from("ref_kota").select("kota_id, nama_kota").order("nama_kota")
       ]);
+
+      // Update kota list for dropdowns
+      if (resKota.data && resKota.data.length > 0) {
+        setKotaList(resKota.data.map((k: any) => ({ kota_id: k.kota_id, nama_kota: k.nama_kota })));
+      }
 
       if (resPelanggan.error || resPaket.error) {
         console.error("[Supabase] Error loading data from Supabase:", {
@@ -499,6 +520,66 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const addCustomer = async (data: NewCustomerInput): Promise<{ error: any | null }> => {
+    try {
+      const supabase = createClient();
+
+      // Build insert payload — omit null/empty optional fields
+      const payload: Record<string, any> = {
+        nama_lengkap: data.nama_lengkap,
+        email: data.email,
+      };
+      if (data.no_hp) payload.no_hp = data.no_hp;
+      if (data.tanggal_lahir) payload.tanggal_lahir = data.tanggal_lahir;
+      // kota & kode_pos are informational; stored in notes if DB is extended later
+
+      const { error } = await supabase.from("m_pelanggan").insert([payload]);
+      if (error) {
+        console.error("[Supabase] Failed to insert customer:", error);
+        return { error };
+      }
+
+      // Refresh customer list after successful insert
+      await refreshData();
+      return { error: null };
+    } catch (err) {
+      console.error("[Supabase] addCustomer exception:", err);
+      return { error: err };
+    }
+  };
+
+  const updateCustomer = async (pelangganId: number, data: Partial<NewCustomerInput>): Promise<{ error: any | null }> => {
+    try {
+      const supabase = createClient();
+      const payload: Record<string, any> = {};
+      if (data.nama_lengkap !== undefined) payload.nama_lengkap = data.nama_lengkap;
+      if (data.email !== undefined) payload.email = data.email;
+      if (data.no_hp !== undefined) payload.no_hp = data.no_hp;
+      if (data.tanggal_lahir !== undefined) payload.tanggal_lahir = data.tanggal_lahir || null;
+
+      const { error } = await supabase.from("m_pelanggan").update(payload).eq("pelanggan_id", pelangganId);
+      if (error) { console.error("[Supabase] updateCustomer error:", error); return { error }; }
+      await refreshData();
+      return { error: null };
+    } catch (err) {
+      console.error("[Supabase] updateCustomer exception:", err);
+      return { error: err };
+    }
+  };
+
+  const deleteCustomer = async (pelangganId: number): Promise<{ error: any | null }> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("m_pelanggan").delete().eq("pelanggan_id", pelangganId);
+      if (error) { console.error("[Supabase] deleteCustomer error:", error); return { error }; }
+      await refreshData();
+      return { error: null };
+    } catch (err) {
+      console.error("[Supabase] deleteCustomer exception:", err);
+      return { error: err };
+    }
+  };
+
   useEffect(() => {
     refreshData();
   }, []);
@@ -526,9 +607,13 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
         recentActivities,
         topPackages,
         bookingSummary,
+        kotaList,
         loading,
         error,
-        refreshData
+        refreshData,
+        addCustomer,
+        updateCustomer,
+        deleteCustomer
       }}
     >
       {children}
