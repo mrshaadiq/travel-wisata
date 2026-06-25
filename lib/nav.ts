@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, Heart, Package, CalendarClock, MapPin, Building2,
-  Bus, UserCheck, Ticket, CreditCard, RotateCcw, TrendingUp, BarChart3,
+  Bus, UserCheck, Ticket, CreditCard, RotateCcw, BarChart3,
   PieChart, BadgePercent, ScrollText, Settings, type LucideIcon,
 } from "lucide-react";
 
@@ -45,9 +45,9 @@ export const navSections: NavSection[] = [
   {
     title: "Reports",
     items: [
-      { label: "Revenue Report", to: "/reports/revenue", icon: TrendingUp },
       { label: "Customer Report", to: "/reports/customers", icon: BarChart3 },
       { label: "Booking Report", to: "/reports/bookings", icon: PieChart },
+      { label: "Destination Report", to: "/reports/destinations", icon: MapPin },
     ],
   },
   {
