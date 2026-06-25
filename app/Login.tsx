@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plane, Mail, Lock, Eye, EyeOff, User, Phone } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User, Phone } from "lucide-react";
+import Image from "next/image";
 import { destinationImages } from "../lib/images";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { createClient } from "../utils/supabase/client";
@@ -142,8 +143,15 @@ export function Login() {
         <div className="absolute inset-0 bg-gradient-to-t from-blue-950/90 via-blue-900/40 to-blue-900/20" />
         <div className="absolute inset-0 flex flex-col justify-between p-12 text-white">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-              <Plane className="size-5 -rotate-45" />
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm shadow-black/20 overflow-hidden">
+              <Image
+                src="/aircare-logo.png"
+                alt="Aircare"
+                width={34}
+                height={34}
+                className="object-contain"
+                priority
+              />
             </div>
             <span className="text-xl font-bold">TravelGo</span>
           </div>
@@ -169,8 +177,15 @@ export function Login() {
         <div className="relative w-full max-w-md">
           <div className="rounded-3xl border border-white/60 bg-white/70 p-8 shadow-xl shadow-blue-900/5 backdrop-blur-xl animate-fade-in">
             <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                <Plane className="size-5 -rotate-45" />
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm shadow-black/10 overflow-hidden border border-border/40">
+                <Image
+                  src="/aircare-logo.png"
+                  alt="Aircare"
+                  width={34}
+                  height={34}
+                  className="object-contain"
+                  priority
+                />
               </div>
               <span className="text-xl font-bold text-foreground">TravelGo</span>
             </div>
@@ -299,7 +314,7 @@ export function Login() {
               </button>
             </form>
           </div>
-          <p className="mt-6 text-center text-xs text-muted-foreground">© TravelGo 2026 · All rights reserved</p>
+          <p className="mt-6 text-center text-xs text-muted-foreground">© Aircare 2026 · All rights reserved</p>
         </div>
       </div>
     </div>

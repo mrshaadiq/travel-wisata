@@ -24,7 +24,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const [lang, setLang] = useState("EN");
   const router = useRouter();
   const supabase = createClient();
-  const [profile, setProfile] = useState({ name: "Admin Travel", email: "admin@travelgo.id" });
+  const [profile, setProfile] = useState({ name: "Admin Travel", email: "admin@aircare.id" });
 
   useEffect(() => {
     async function loadProfile() {

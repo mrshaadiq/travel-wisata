@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Plane, LogOut, ChevronsUpDown } from "lucide-react";
+import Image from "next/image";
+import { LogOut, ChevronsUpDown } from "lucide-react";
 import { navSections } from "../../lib/nav";
 import { avatar } from "../../lib/images";
 import { cn } from "../ui/utils";
@@ -46,8 +47,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <aside className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center gap-2.5 px-5">
-        <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/30">
-          <Plane className="size-5 -rotate-45" />
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm shadow-black/10 overflow-hidden border border-border/40">
+          <Image
+            src="/aircare-logo.png"
+            alt="Aircare"
+            width={32}
+            height={32}
+            className="object-contain"
+            priority
+          />
         </div>
         <div className="leading-none">
           <p className="text-lg font-bold tracking-tight text-foreground">TravelGo</p>

@@ -46,14 +46,16 @@ export function Settings() {
           {tab === "company" && (
             <Panel title="Company Information">
               <div className="flex items-center gap-4">
-                <div className="flex size-20 items-center justify-center rounded-2xl bg-primary text-primary-foreground text-2xl font-bold">TG</div>
+                <div className="size-20 overflow-hidden rounded-2xl border border-border bg-muted flex items-center justify-center">
+                  <img src="/aircare-logo.png" alt="Aircare Logo" className="h-full w-full object-contain p-2" />
+                </div>
                 <button className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted"><Upload className="size-4" /> Upload Logo</button>
               </div>
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Business Name" defaultValue="TravelGo Indonesia" />
-                <Field label="Email" defaultValue="hello@travelgo.id" />
+                <Field label="Business Name" defaultValue="Aircare Indonesia" />
+                <Field label="Email" defaultValue="hello@aircare.id" />
                 <Field label="Phone" defaultValue="+62 21 5050 6060" />
-                <Field label="Website" defaultValue="www.travelgo.id" />
+                <Field label="Website" defaultValue="www.aircare.id" />
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-sm font-medium text-foreground">Address</label>
                   <textarea rows={2} defaultValue="Jl. Sudirman No. 88, Jakarta Pusat, DKI Jakarta 10220" className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />

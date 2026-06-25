@@ -10,8 +10,8 @@ const playfairDisplayHeading = Playfair_Display({subsets:['latin'],variable:'--f
 const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "TravelGo - Booking Management",
-  description: "Travel & Wisata Booking Management Dashboard",
+  title: "Aircare - Booking Management",
+  description: "Aircare Travel & Wisata Booking Management Dashboard",
 };
 
 export default function RootLayout({

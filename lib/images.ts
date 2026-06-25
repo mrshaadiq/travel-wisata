@@ -1,4 +1,4 @@
-// Centralized Unsplash imagery for TravelGo. Each entry is a curated, thematically
+// Centralized Unsplash imagery for Aircare. Each entry is a curated, thematically
 // appropriate travel photo. Widths/heights are tuned per usage to keep layout crisp.
 const u = (id: string, w = 800, h = 600) =>
   `https://images.unsplash.com/photo-${id}?w=${w}&h=${h}&fit=crop&auto=format`;
