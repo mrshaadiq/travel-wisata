@@ -7,7 +7,7 @@ import {
 } from "recharts";
 import {
   FileText, FileSpreadsheet, FileDown, TrendingUp, Users, Ticket, MapPin,
-  DollarSign, Calendar, Package, Activity,
+  Activity,
 } from "lucide-react";
 import { PageHeader } from "../components/shared/PageHeader";
 import { Panel } from "../components/shared/Panel";
@@ -15,14 +15,14 @@ import { useTravel } from "../hooks/useTravel";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
+// Kategori menu laporan
 const categories = [
-  { key: "revenue", label: "Revenue Report", to: "/reports/revenue", icon: TrendingUp },
   { key: "customers", label: "Customer Report", to: "/reports/customers", icon: Users },
   { key: "bookings", label: "Booking Report", to: "/reports/bookings", icon: Ticket },
   { key: "destinations", label: "Destination Report", to: "/reports/destinations", icon: MapPin },
 ];
 
-// ─── Currency formatter ───────────────────────────────────────────────────────
+// Format mata uang Rupiah
 const fmtIDR = (n: number) =>
   n >= 1_000_000_000
     ? "Rp " + (n / 1_000_000_000).toFixed(1) + "B"
@@ -30,7 +30,7 @@ const fmtIDR = (n: number) =>
     ? "Rp " + (n / 1_000_000).toFixed(0) + "M"
     : "Rp " + n.toLocaleString("id-ID");
 
-// ─── Summary card ─────────────────────────────────────────────────────────────
+// Kartu Ringkasan KPI
 function SummaryCard({
   icon: Icon,
   label,
@@ -63,8 +63,10 @@ function SummaryCard({
 
 export function Reports() {
   const params = useParams();
-  const type = (params?.type as string) || "revenue";
+  const type = (params?.type as string) || "customers";
   const router = useRouter();
+  
+  // Menggunakan useTravel dari hook
   const {
     revenueData,
     bookingTrend,
@@ -79,10 +81,10 @@ export function Reports() {
 
   const active = categories.find((c) => c.key === type) ?? categories[0];
 
-  // ── Derived summary numbers ──────────────────────────────────────────────
+  // Perhitungan Nilai Kumulatif & KPI
   const totalRevenue = payments
-    .filter((p) => p.status === "Success")
-    .reduce((s, p) => s + p.amount, 0);
+    .filter((p) => p.status === "Success" || p.status_bayar === "Success")
+    .reduce((s, p) => s + (p.amount || p.jumlah_bayar || 0), 0);
 
   const totalBookings = bookings.length;
   const totalCustomers = customers.length;
@@ -96,111 +98,78 @@ export function Reports() {
       ? ((confirmedBookings / totalBookings) * 100).toFixed(1)
       : "0.0";
 
-  // ── Export helpers ───────────────────────────────────────────────────────
+  // FUNGSI EKSPOR DATA 
 
-  /** CSV export for current report type */
+  /** Ekspor ke format CSV */
   const handleCSV = () => {
     let headers: string[] = [];
     let rows: (string | number)[][] = [];
 
-    if (active.key === "revenue") {
-      headers = ["Month", "Revenue (Juta)", "Target (Juta)"];
-      rows = revenueData.map((r) => [r.month, r.revenue, r.target]);
-    } else if (active.key === "customers") {
-      headers = ["Month", "Cumulative Customers"];
+    if (active.key === "customers") {
+      headers = ["Bulan", "Jumlah Pelanggan Kumulatif"];
       rows = customerGrowth.map((c) => [c.month, c.customers]);
     } else if (active.key === "bookings") {
-      headers = ["Month", "Bookings", "Cancelled"];
+      headers = ["Bulan", "Total Bookings", "Cancelled"];
       rows = bookingTrend.map((b) => [b.month, b.bookings, b.cancelled]);
     } else if (active.key === "destinations") {
-      headers = ["Destination", "Share (%)"];
+      headers = ["Nama Destinasi", "Porsi Share (%)"];
       rows = destinationShare.map((d) => [d.name, d.value]);
     }
 
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
 
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", `${active.key}-report.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${active.key}-report_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success(`CSV report untuk "${active.label}" berhasil diunduh`);
+    toast.success(`Laporan CSV untuk "${active.label}" berhasil diunduh`);
   };
 
-  /** Excel export using SheetJS (xlsx) */
+  /** Ekspor ke format Excel (.xlsx)*/
   const handleExcel = async () => {
     try {
-      // Dynamic import so server-side bundle stays small
+      // Membaca modul xlsx secara dinamis di sisi klien agar aman saat server-side rendering
       const XLSX = await import("xlsx");
 
-      const wb = XLSX.utils.book_new();
+      let sheetData: Record<string, unknown>[] = [];
 
-      const addSheet = (name: string, data: Record<string, unknown>[]) => {
-        const ws = XLSX.utils.json_to_sheet(data);
-        XLSX.utils.book_append_sheet(wb, ws, name);
-      };
-
-      if (active.key === "revenue") {
-        addSheet("Revenue", revenueData.map((r) => ({
-          Bulan: r.month,
-          "Revenue (Juta Rp)": r.revenue,
-          "Target (Juta Rp)": r.target,
-        })));
-        addSheet("Top Packages", topPackages.map((p) => ({
-          "Nama Paket": p.name,
-          "Total Sales": p.sales,
-          Revenue: p.revenue,
-        })));
-      } else if (active.key === "customers") {
-        addSheet("Customer Growth", customerGrowth.map((c) => ({
-          Bulan: c.month,
-          "Jumlah Kumulatif": c.customers,
-        })));
-        addSheet("Customer List", customers.slice(0, 500).map((c) => ({
-          ID: c.id,
-          Nama: c.name,
-          Email: c.email,
-          Kota: c.city,
-          Bookings: c.bookings,
-          "Last Booking": c.lastBooking,
-          Status: c.status,
-        })));
+      if (active.key === "customers") {
+        sheetData = customerGrowth.map((c) => ({
+          "Bulan": c.month,
+          "Jumlah Pelanggan Kumulatif": c.customers,
+        }));
       } else if (active.key === "bookings") {
-        addSheet("Booking Trend", bookingTrend.map((b) => ({
-          Bulan: b.month,
-          Bookings: b.bookings,
-          Cancelled: b.cancelled,
-        })));
-        addSheet("Booking List", bookings.slice(0, 500).map((b) => ({
-          ID: b.id,
-          Customer: b.customer,
-          Paket: b.package,
-          Destinasi: b.destination,
-          Tanggal: b.date,
-          Peserta: b.participants,
-          "Total (Rp)": b.amount,
-          Status: b.status,
-          Metode: b.method,
-        })));
+        sheetData = bookingTrend.map((b) => ({
+          "Bulan": b.month,
+          "Total Bookings": b.bookings,
+          "Cancelled": b.cancelled,
+        }));
       } else if (active.key === "destinations") {
-        addSheet("Destination Share", destinationShare.map((d) => ({
-          Destinasi: d.name,
-          "Share (%)": d.value,
-        })));
+        sheetData = destinationShare.map((d) => ({
+          "Nama Destinasi": d.name,
+          "Porsi Share (%)": d.value,
+        }));
       }
 
-      XLSX.writeFile(wb, `${active.key}-report.xlsx`);
-      toast.success(`Excel report untuk "${active.label}" berhasil diunduh`);
+      // konversi data JSON ke format Worksheet SheetJS
+      const worksheet = XLSX.utils.json_to_sheet(sheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, active.label);
+
+      // Memicu unduhan langsung file .xlsx asli
+      XLSX.writeFile(workbook, `${active.key}-report_${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.success(`Laporan Excel untuk "${active.label}" berhasil diunduh via SheetJS`);
     } catch (err) {
       console.error(err);
-      toast.error("Gagal mengekspor Excel");
+      toast.error("Gagal mengekspor Excel. Pastikan library 'xlsx' sudah terinstal di project Anda.");
     }
   };
 
-  /** PDF via browser print dialog — inject print-specific styles */
+  /** Ekspor ke format PDF profesional menggunakan Print Dialog bawaan Browser */
   const handlePDF = () => {
     const reportTitle = active.label;
     const printDate = new Date().toLocaleDateString("id-ID", {
@@ -209,23 +178,14 @@ export function Reports() {
       day: "numeric",
     });
 
-    // Build a simple table string for the active report
     let tableHTML = "";
 
-    if (active.key === "revenue") {
+    if (active.key === "customers") {
       tableHTML = `
         <table>
-          <thead><tr><th>Bulan</th><th>Revenue (Juta Rp)</th><th>Target (Juta Rp)</th></tr></thead>
+          <thead><tr><th>Bulan</th><th>Jumlah Kumulatif Pelanggan</th></tr></thead>
           <tbody>
-            ${revenueData.map((r) => `<tr><td>${r.month}</td><td>${r.revenue.toLocaleString("id-ID")}</td><td>${r.target.toLocaleString("id-ID")}</td></tr>`).join("")}
-          </tbody>
-        </table>`;
-    } else if (active.key === "customers") {
-      tableHTML = `
-        <table>
-          <thead><tr><th>Bulan</th><th>Jumlah Kumulatif</th></tr></thead>
-          <tbody>
-            ${customerGrowth.map((c) => `<tr><td>${c.month}</td><td>${c.customers}</td></tr>`).join("")}
+            ${customerGrowth.map((c) => `<tr><td>${c.month}</td><td>${c.customers.toLocaleString("id-ID")}</td></tr>`).join("")}
           </tbody>
         </table>`;
     } else if (active.key === "bookings") {
@@ -259,21 +219,19 @@ export function Reports() {
           <title>${reportTitle}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 32px; color: #111; }
-            h1 { font-size: 22px; margin-bottom: 4px; }
+            h1 { font-size: 22px; margin-bottom: 4px; color: #1e3a8a; }
             .subtitle { color: #555; font-size: 13px; margin-bottom: 24px; }
             table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-            th { background: #2563EB; color: #fff; padding: 8px 12px; text-align: left; font-size: 13px; }
-            td { padding: 7px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+            th { background: #2563EB; color: #fff; padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 600; }
+            td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
             tr:nth-child(even) td { background: #f8fafc; }
-            .footer { margin-top: 32px; font-size: 11px; color: #888; }
+            .footer { margin-top: 32px; font-size: 11px; color: #888; border-top: 1px solid #e2e8f0; padding-top: 8px; }
           </style>
         </head>
         <body>
           <h1>Travel Wisata — ${reportTitle}</h1>
           <p class="subtitle">Dicetak pada: ${printDate} | Total data: ${
-      active.key === "revenue"
-        ? revenueData.length + " bulan"
-        : active.key === "customers"
+      active.key === "customers"
         ? customerGrowth.length + " bulan"
         : active.key === "bookings"
         ? bookingTrend.length + " bulan"
@@ -281,13 +239,19 @@ export function Reports() {
     }</p>
           ${tableHTML}
           <p class="footer">Dokumen ini digenerate otomatis dari sistem Travel Wisata.</p>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.onafterprint = function() {
+                window.close();
+              }
+            }
+          </script>
         </body>
       </html>
     `);
     win.document.close();
-    win.focus();
-    win.print();
-    toast.success(`PDF report untuk "${active.label}" sedang dicetak`);
+    toast.success(`PDF report untuk "${active.label}" sedang diproses untuk dicetak`);
   };
 
   if (loading) {
@@ -303,6 +267,7 @@ export function Reports() {
 
   return (
     <>
+      {/* Header Halaman Utama */}
       <PageHeader
         title="Report Center"
         description="Analisis performa bisnis dan ekspor laporan detail."
@@ -310,19 +275,19 @@ export function Reports() {
           <>
             <button
               onClick={handlePDF}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors active:scale-95"
             >
               <FileText className="size-4" /> PDF
             </button>
             <button
               onClick={handleExcel}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors active:scale-95"
             >
               <FileSpreadsheet className="size-4" /> Excel
             </button>
             <button
               onClick={handleCSV}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted transition-colors active:scale-95"
             >
               <FileDown className="size-4" /> CSV
             </button>
@@ -330,8 +295,8 @@ export function Reports() {
         }
       />
 
-      {/* ── Report category tabs ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Navigasi Kategori */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {categories.map((c) => (
           <button
             key={c.key}
@@ -365,47 +330,23 @@ export function Reports() {
         ))}
       </div>
 
-      {/* ── Summary KPI cards ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <SummaryCard icon={DollarSign} label="Total Revenue" value={fmtIDR(totalRevenue)} sub="Pembayaran sukses" color="#22C55E" />
+      {/* Kartu Ringkasan KPI Laporan */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <SummaryCard icon={Ticket} label="Total Bookings" value={totalBookings.toLocaleString("id-ID")} sub={`${conversionRate}% conversion`} color="#2563EB" />
         <SummaryCard icon={Users} label="Total Pelanggan" value={totalCustomers.toLocaleString("id-ID")} sub="Terdaftar di sistem" color="#0EA5E9" />
         <SummaryCard icon={Activity} label="Avg. Booking Value" value={fmtIDR(avgBookingValue)} sub="Per transaksi" color="#8B5CF6" />
       </div>
 
-      {/* ── Main chart + side panels ─────────────────────────────────────── */}
+      {/* Area Grafik Utama & Panel Informasi Samping */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Chart */}
+        {/* Grafik Tren */}
         <Panel
           title={`${active.label} — Tren 12 Bulan`}
           description="Data langsung dari database"
           className="lg:col-span-2"
         >
           <ResponsiveContainer width="100%" height={320}>
-            {active.key === "revenue" ? (
-              <AreaChart data={revenueData} margin={{ left: -10, right: 8 }}>
-                <defs>
-                  <linearGradient id="rg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563EB" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#2563EB" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#22C55E" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#22C55E" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "#64748b" }} />
-                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "#64748b" }} tickFormatter={(v) => `${v}M`} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", fontSize: 13 }}
-                  formatter={(v) => [`Rp ${Number(v)}M`, undefined]}
-                />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                <Area type="monotone" dataKey="revenue" stroke="#2563EB" strokeWidth={2.5} fill="url(#rg)" name="Revenue" />
-                <Area type="monotone" dataKey="target" stroke="#22C55E" strokeWidth={2} strokeDasharray="4 4" fill="url(#tg)" name="Target" />
-              </AreaChart>
-            ) : active.key === "customers" ? (
+            {active.key === "customers" ? (
               <LineChart data={customerGrowth} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "#64748b" }} />
@@ -450,9 +391,9 @@ export function Reports() {
           </ResponsiveContainer>
         </Panel>
 
-        {/* Side panels */}
+        {/* Panel Samping Ringkasan */}
         <div className="space-y-6">
-          {/* Top selling package */}
+          {/* Paket Terlaris */}
           <Panel title="Top Selling Package">
             {topPackages && topPackages.length > 0 ? (
               <div className="space-y-3">
@@ -473,7 +414,7 @@ export function Reports() {
             )}
           </Panel>
 
-          {/* Destination popularity */}
+          {/* Popularitas Destinasi */}
           <Panel title="Popularitas Destinasi">
             {destinationShare.length > 0 ? (
               <div className="space-y-3">
@@ -499,7 +440,7 @@ export function Reports() {
         </div>
       </div>
 
-      {/* ── Recent booking table ─────────────────────────────────────────── */}
+      {/* Tabel Utama: Riwayat Booking Terkini */}
       <Panel
         title="Data Booking Terkini"
         description={`${bookings.length} total booking tercatat`}
