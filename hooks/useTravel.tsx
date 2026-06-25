@@ -23,6 +23,12 @@ interface NewPackageInput {
   is_aktif: boolean;
 }
 
+interface NewDestinationInput {
+  nama_destinasi: string;
+  kota_id: number | null;
+  deskripsi: string;
+}
+
 interface TravelContextType {
   customers: typeof dummy.customers;
   packages: typeof dummy.packages;
@@ -55,6 +61,9 @@ interface TravelContextType {
   addPackage: (data: NewPackageInput) => Promise<{ error: any | null }>;
   updatePackage: (paketId: number, data: Partial<NewPackageInput>) => Promise<{ error: any | null }>;
   deletePackage: (paketId: number) => Promise<{ error: any | null }>;
+  addDestination: (data: NewDestinationInput) => Promise<{ error: any | null }>;
+  updateDestination: (destinasiId: number, data: Partial<NewDestinationInput>) => Promise<{ error: any | null }>;
+  deleteDestination: (destinasiId: number) => Promise<{ error: any | null }>;
 }
 
 const TravelDataContext = createContext<TravelContextType | undefined>(undefined);
@@ -700,6 +709,53 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const addDestination = async (data: NewDestinationInput): Promise<{ error: any | null }> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("m_destinasi").insert({
+        nama_destinasi: data.nama_destinasi,
+        kota_id: data.kota_id || null,
+        deskripsi: data.deskripsi || null,
+      });
+      if (error) { console.error("[Supabase] addDestination error:", error); return { error }; }
+      await refreshData();
+      return { error: null };
+    } catch (err) {
+      console.error("[Supabase] addDestination exception:", err);
+      return { error: err };
+    }
+  };
+
+  const deleteDestination = async (destinasiId: number): Promise<{ error: any | null }> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("m_destinasi").delete().eq("destinasi_id", destinasiId);
+      if (error) { console.error("[Supabase] deleteDestination error:", error); return { error }; }
+      await refreshData();
+      return { error: null };
+    } catch (err) {
+      console.error("[Supabase] deleteDestination exception:", err);
+      return { error: err };
+    }
+  };
+
+  const updateDestination = async (destinasiId: number, data: Partial<NewDestinationInput>): Promise<{ error: any | null }> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("m_destinasi").update({
+        ...(data.nama_destinasi !== undefined && { nama_destinasi: data.nama_destinasi }),
+        ...(data.kota_id !== undefined && { kota_id: data.kota_id }),
+        ...(data.deskripsi !== undefined && { deskripsi: data.deskripsi }),
+      }).eq("destinasi_id", destinasiId);
+      if (error) { console.error("[Supabase] updateDestination error:", error); return { error }; }
+      await refreshData();
+      return { error: null };
+    } catch (err) {
+      console.error("[Supabase] updateDestination exception:", err);
+      return { error: err };
+    }
+  };
+
   useEffect(() => {
     refreshData();
   }, []);
@@ -737,7 +793,10 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
         deleteCustomer,
         addPackage,
         updatePackage,
-        deletePackage
+        deletePackage,
+        addDestination,
+        updateDestination,
+        deleteDestination
       }}
     >
       {children}
