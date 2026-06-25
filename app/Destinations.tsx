@@ -1,5 +1,7 @@
+"use client";
+
 import { useState } from "react";
-import { Plus, MapPin, TrendingUp, Pencil, Trash2, Image as ImageIcon } from "lucide-react";
+import { Plus, MapPin, TrendingUp, Pencil, Trash2, Loader2 } from "lucide-react";
 import { PageHeader } from "../components/shared/PageHeader";
 import { StatusBadge } from "../components/shared/StatusBadge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
@@ -9,9 +11,26 @@ import {
 import { useTravel } from "../hooks/useTravel";
 import { toast } from "sonner";
 
+const EMPTY_FORM = { nama_destinasi: "", kota: "", deskripsi: "", image_url: "" };
+
+type Dest = ReturnType<typeof useTravel>["destinations"][number];
+
 export function Destinations() {
-  const { destinations, loading } = useTravel();
-  const [open, setOpen] = useState(false);
+  const { destinations, loading, addDestination, updateDestination, deleteDestination } = useTravel();
+
+  // --- Add dialog ---
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+
+  // --- Edit dialog ---
+  const [editTarget, setEditTarget] = useState<{ id: number; d: Dest } | null>(null);
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
+  const [updating, setUpdating] = useState(false);
+
+  // --- Delete dialog ---
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   if (loading) {
     return (
@@ -24,6 +43,83 @@ export function Destinations() {
     );
   }
 
+  const handleAddChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setAddForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setEditForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const parseId = (id: string) => parseInt(id.replace("DST-", ""), 10);
+
+  // --- Handlers ---
+  const handleAdd = async () => {
+    if (!addForm.nama_destinasi.trim()) { toast.error("Destination name is required"); return; }
+    setSaving(true);
+    const { error } = await addDestination({
+      nama_destinasi: addForm.nama_destinasi.trim(),
+      kota_id: null,
+      deskripsi: addForm.deskripsi.trim(),
+    });
+    setSaving(false);
+    if (error) { toast.error("Failed to add destination: " + (error.message ?? "Unknown error")); }
+    else { toast.success("Destination added!"); setAddForm(EMPTY_FORM); setAddOpen(false); }
+  };
+
+  const openEdit = (d: Dest) => {
+    setEditTarget({ id: parseId(d.id), d });
+    setEditForm({ nama_destinasi: d.name, kota: d.province ?? "", deskripsi: "", image_url: d.image ?? "" });
+  };
+
+  const handleUpdate = async () => {
+    if (!editTarget) return;
+    if (!editForm.nama_destinasi.trim()) { toast.error("Destination name is required"); return; }
+    setUpdating(true);
+    const { error } = await updateDestination(editTarget.id, {
+      nama_destinasi: editForm.nama_destinasi.trim(),
+      kota_id: null,
+      deskripsi: editForm.deskripsi.trim(),
+    });
+    setUpdating(false);
+    if (error) { toast.error("Failed to update destination: " + (error.message ?? "Unknown error")); }
+    else { toast.success("Destination updated!"); setEditTarget(null); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { error } = await deleteDestination(deleteTarget.id);
+    setDeleting(false);
+    if (error) { toast.error("Failed to delete destination: " + (error.message ?? "Unknown error")); }
+    else { toast.success(`"${deleteTarget.name}" deleted`); setDeleteTarget(null); }
+  };
+
+  // Reusable form body (same fields for add & edit)
+  const FormFields = ({
+    form,
+    onChange,
+  }: {
+    form: typeof EMPTY_FORM;
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  }) => (
+    <div className="space-y-4">
+      <Field label="Destination Name" name="nama_destinasi" placeholder="e.g. Bali" value={form.nama_destinasi} onChange={onChange} required />
+      <Field label="City" name="kota" placeholder="e.g. Denpasar" value={form.kota} onChange={onChange} />
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-foreground">
+          Description <span className="text-xs text-muted-foreground">(optional)</span>
+        </label>
+        <textarea
+          name="deskripsi"
+          rows={3}
+          placeholder="Describe the destination..."
+          value={form.deskripsi}
+          onChange={onChange}
+          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+        />
+      </div>
+      <Field label="Image URL" name="image_url" placeholder="https://example.com/photo.jpg" value={form.image_url} onChange={onChange} />
+    </div>
+  );
 
   return (
     <>
@@ -31,40 +127,34 @@ export function Destinations() {
         title="Destination Management"
         description="Curate the destinations featured across your tour packages."
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) setAddForm(EMPTY_FORM); }}>
             <DialogTrigger asChild>
-              <button className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"><Plus className="size-4" /> Add Destination</button>
+              <button className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
+                <Plus className="size-4" /> Add Destination
+              </button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add Destination</DialogTitle>
-                <DialogDescription>Add a new destination with photo and location.</DialogDescription>
+                <DialogDescription>Add a new destination to the system.</DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
-                <div className="flex h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/30 text-muted-foreground hover:border-primary hover:text-primary">
-                  <ImageIcon className="size-7" />
-                  <p className="text-sm font-medium">Upload destination photo</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Destination Name" placeholder="Bali" />
-                  <Field label="Province" placeholder="Bali" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-foreground">Description</label>
-                  <textarea rows={3} placeholder="Describe the destination..." className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
-                </div>
-                <div className="flex h-28 items-center justify-center rounded-xl border border-border bg-gradient-to-br from-blue-50 to-sky-50 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-2"><MapPin className="size-4 text-primary" /> Map preview</span>
-                </div>
-              </div>
+              <FormFields form={addForm} onChange={handleAddChange} />
               <DialogFooter>
-                <button onClick={() => { setOpen(false); toast.success("Destination added"); }} className="h-10 w-full rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90">Save Destination</button>
+                <button
+                  onClick={handleAdd}
+                  disabled={saving}
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                >
+                  {saving && <Loader2 className="size-4 animate-spin" />}
+                  {saving ? "Saving..." : "Save Destination"}
+                </button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         }
       />
 
+      {/* Destination grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {destinations.map((d) => (
           <div key={d.id} className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:shadow-md">
@@ -83,23 +173,100 @@ export function Destinations() {
               <div className="mt-3 flex items-center justify-between">
                 <span className="flex items-center gap-1 text-sm font-semibold text-green-600"><TrendingUp className="size-3.5" /> {d.popularity}% popularity</span>
                 <div className="flex gap-1">
-                  <button onClick={() => toast.success("Edit destination")} className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-primary"><Pencil className="size-3.5" /></button>
-                  <button onClick={() => toast.error("Destination deleted")} className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600"><Trash2 className="size-3.5" /></button>
+                  <button
+                    onClick={() => openEdit(d)}
+                    className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-muted hover:text-primary"
+                    title="Edit destination"
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget({ id: parseId(d.id), name: d.name })}
+                    className="rounded-lg border border-border p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                    title="Delete destination"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(v) => { if (!v) setEditTarget(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Destination</DialogTitle>
+            <DialogDescription>Update the details for this destination.</DialogDescription>
+          </DialogHeader>
+          <FormFields form={editForm} onChange={handleEditChange} />
+          <DialogFooter>
+            <button
+              onClick={() => setEditTarget(null)}
+              className="h-10 flex-1 rounded-lg border border-border text-sm font-medium hover:bg-muted"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleUpdate}
+              disabled={updating}
+              className="flex-1 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            >
+              {updating && <Loader2 className="size-4 animate-spin" />}
+              {updating ? "Saving..." : "Save Changes"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Destination</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>&ldquo;{deleteTarget?.name}&rdquo;</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="flex-1 h-10 rounded-lg border border-border text-sm font-medium hover:bg-muted"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex-1 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              {deleting && <Loader2 className="size-4 animate-spin" />}
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
 
-function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+function Field({
+  label,
+  required,
+  ...props
+}: { label: string; required?: boolean } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-foreground">{label}</label>
-      <input {...props} className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+      <label className="mb-1.5 block text-sm font-medium text-foreground">
+        {label}
+        {required && <span className="ml-0.5 text-red-500">*</span>}
+      </label>
+      <input
+        {...props}
+        className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+      />
     </div>
   );
 }
