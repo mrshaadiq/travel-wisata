@@ -14,6 +14,15 @@ interface NewCustomerInput {
   kode_pos: string;
 }
 
+interface NewPackageInput {
+  nama_paket: string;
+  kategori_id: number | null;
+  durasi_hari: number;
+  harga_dasar: number;
+  deskripsi: string;
+  is_aktif: boolean;
+}
+
 interface TravelContextType {
   customers: typeof dummy.customers;
   packages: typeof dummy.packages;
@@ -36,12 +45,16 @@ interface TravelContextType {
   topPackages: typeof dummy.topPackages;
   bookingSummary: typeof dummy.bookingSummary;
   kotaList: { kota_id: number; nama_kota: string }[];
+  kategoriList: { kategori_id: number; nama_kategori: string }[];
   loading: boolean;
   error: any;
   refreshData: () => Promise<void>;
   addCustomer: (data: NewCustomerInput) => Promise<{ error: any | null }>;
   updateCustomer: (pelangganId: number, data: Partial<NewCustomerInput>) => Promise<{ error: any | null }>;
   deleteCustomer: (pelangganId: number) => Promise<{ error: any | null }>;
+  addPackage: (data: NewPackageInput) => Promise<{ error: any | null }>;
+  updatePackage: (paketId: number, data: Partial<NewPackageInput>) => Promise<{ error: any | null }>;
+  deletePackage: (paketId: number) => Promise<{ error: any | null }>;
 }
 
 const TravelDataContext = createContext<TravelContextType | undefined>(undefined);
@@ -60,6 +73,7 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
   const [promotions, setPromotions] = useState<typeof dummy.promotions>(dummy.promotions);
   const [activityLogs, setActivityLogs] = useState<typeof dummy.activityLogs>(dummy.activityLogs);
   const [kotaList, setKotaList] = useState<{ kota_id: number; nama_kota: string }[]>([]);
+  const [kategoriList, setKategoriList] = useState<{ kategori_id: number; nama_kategori: string }[]>([]);
 
   // Dashboards / Analytics states
   const [dashboardStats, setDashboardStats] = useState<typeof dummy.dashboardStats>(dummy.dashboardStats);
@@ -125,7 +139,8 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
         resRefund,
         resJadwal,
         resAudit,
-        resKota
+        resKota,
+        resKategori
       ] = await Promise.all([
         supabase.from("m_pelanggan").select("*, ref_kota(nama_kota)"),
         supabase.from("m_paket_wisata").select("*, ref_kategori_wisata(nama_kategori)"),
@@ -139,12 +154,18 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
         supabase.from("t_refund").select("*"),
         supabase.from("t_jadwal_keberangkatan").select("*, m_paket_wisata(nama_paket), m_pemandu(nama_pemandu), m_transportasi(nama_armada)"),
         supabase.from("t_log_audit").select("*").order("waktu_log", { ascending: false }).limit(20),
-        supabase.from("ref_kota").select("kota_id, nama_kota").order("nama_kota")
+        supabase.from("ref_kota").select("kota_id, nama_kota").order("nama_kota"),
+        supabase.from("ref_kategori_wisata").select("kategori_id, nama_kategori").order("nama_kategori")
       ]);
 
       // Update kota list for dropdowns
       if (resKota.data && resKota.data.length > 0) {
         setKotaList(resKota.data.map((k: any) => ({ kota_id: k.kota_id, nama_kota: k.nama_kota })));
+      }
+
+      // Update kategori list for dropdowns
+      if (resKategori.data && resKategori.data.length > 0) {
+        setKategoriList(resKategori.data.map((k: any) => ({ kategori_id: k.kategori_id, nama_kategori: k.nama_kategori })));
       }
 
       if (resPelanggan.error || resPaket.error) {
@@ -600,6 +621,65 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const addPackage = async (data: NewPackageInput): Promise<{ error: any | null }> => {
+    try {
+      const supabase = createClient();
+      const payload: Record<string, any> = {
+        nama_paket: data.nama_paket,
+        durasi_hari: data.durasi_hari,
+        harga_dasar: data.harga_dasar,
+        is_aktif: data.is_aktif,
+      };
+      if (data.kategori_id) payload.kategori_id = data.kategori_id;
+      if (data.deskripsi) payload.deskripsi = data.deskripsi;
+
+      const { error } = await supabase.from("m_paket_wisata").insert([payload]);
+      if (error) {
+        console.error("[Supabase] Failed to insert package:", error);
+        return { error };
+      }
+      await refreshData();
+      return { error: null };
+    } catch (err) {
+      console.error("[Supabase] addPackage exception:", err);
+      return { error: err };
+    }
+  };
+
+  const updatePackage = async (paketId: number, data: Partial<NewPackageInput>): Promise<{ error: any | null }> => {
+    try {
+      const supabase = createClient();
+      const payload: Record<string, any> = {};
+      if (data.nama_paket !== undefined) payload.nama_paket = data.nama_paket;
+      if (data.kategori_id !== undefined) payload.kategori_id = data.kategori_id;
+      if (data.durasi_hari !== undefined) payload.durasi_hari = data.durasi_hari;
+      if (data.harga_dasar !== undefined) payload.harga_dasar = data.harga_dasar;
+      if (data.deskripsi !== undefined) payload.deskripsi = data.deskripsi;
+      if (data.is_aktif !== undefined) payload.is_aktif = data.is_aktif;
+
+      const { error } = await supabase.from("m_paket_wisata").update(payload).eq("paket_id", paketId);
+      if (error) { console.error("[Supabase] updatePackage error:", error); return { error }; }
+      await refreshData();
+      return { error: null };
+    } catch (err) {
+      console.error("[Supabase] updatePackage exception:", err);
+      return { error: err };
+    }
+  };
+
+  const deletePackage = async (paketId: number): Promise<{ error: any | null }> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("m_paket_wisata").delete().eq("paket_id", paketId);
+      if (error) { console.error("[Supabase] deletePackage error:", error); return { error }; }
+      await refreshData();
+      return { error: null };
+    } catch (err) {
+      console.error("[Supabase] deletePackage exception:", err);
+      return { error: err };
+    }
+  };
+
   useEffect(() => {
     refreshData();
   }, []);
@@ -628,12 +708,16 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
         topPackages,
         bookingSummary,
         kotaList,
+        kategoriList,
         loading,
         error,
         refreshData,
         addCustomer,
         updateCustomer,
-        deleteCustomer
+        deleteCustomer,
+        addPackage,
+        updatePackage,
+        deletePackage
       }}
     >
       {children}

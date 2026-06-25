@@ -6,12 +6,19 @@ import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { useTravel } from "../hooks/useTravel";
-import { formatIDR, itinerary } from "../lib/data";
+import { formatIDR } from "../lib/data";
+import { parseDescription } from "./Packages";
 import { destinationImages, avatar } from "../lib/images";
 
 const gallery = [destinationImages.bali, destinationImages.lombok, destinationImages.komodo, destinationImages.yogyakarta];
-const included = ["Return flights", "4-star hotel accommodation", "Daily breakfast & dinner", "Private air-conditioned transport", "English-speaking tour guide", "All entrance tickets"];
-const excluded = ["Travel insurance", "Personal expenses", "Lunch on free days", "Optional water sports", "Tips & gratuities"];
+const DEFAULT_INCLUDED = ["Return flights", "4-star hotel accommodation", "Daily breakfast & dinner", "Private air-conditioned transport", "English-speaking tour guide", "All entrance tickets"];
+const DEFAULT_EXCLUDED = ["Travel insurance", "Personal expenses", "Lunch on free days", "Optional water sports", "Tips & gratuities"];
+const DEFAULT_ITINERARY = [
+  { day: "Day 1", title: "Arrival & Welcome Dinner", detail: "Airport pickup, hotel check-in, welcome dinner with traditional performance." },
+  { day: "Day 2", title: "Sightseeing Tour", detail: "Full-day guided tour of key attractions with lunch included." },
+  { day: "Day 3", title: "Free Day & Activities", detail: "Free time for personal exploration or optional activities." },
+  { day: "Day 4", title: "Shopping & Departure", detail: "Souvenir shopping and airport transfer for departure." },
+];
 const reviews = [
   { name: "Citra Dewi", rating: 5, text: "Absolutely magical trip! The guide was knowledgeable and the itinerary was perfectly paced.", date: "2 weeks ago" },
   { name: "Fajar Nugroho", rating: 5, text: "Best value for money. Hotels were stunning and everything ran on time.", date: "1 month ago" },
@@ -37,6 +44,13 @@ export function PackageDetail() {
 
   const pkg = packages.find((p) => p.id === id) || packages[0];
   if (!pkg) return null;
+
+  // Parse itinerary & facilities from JSON stored in deskripsi
+  const parsed = parseDescription(pkg.description ?? "");
+  const itinerary = parsed.itinerary?.length ? parsed.itinerary : DEFAULT_ITINERARY;
+  const included = parsed.included?.filter(Boolean).length ? parsed.included!.filter(Boolean) : DEFAULT_INCLUDED;
+  const excluded = parsed.excluded?.filter(Boolean).length ? parsed.excluded!.filter(Boolean) : DEFAULT_EXCLUDED;
+  const overview = parsed.overview?.trim() || `Discover the magic of ${pkg.destination} on this ${pkg.duration} journey crafted for travelers who want comfort, culture and unforgettable scenery.`;
 
 
   return (
@@ -81,11 +95,7 @@ export function PackageDetail() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Panel title="Overview">
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Discover the magic of {pkg.destination} on this {pkg.duration} journey crafted for travelers who want
-              comfort, culture and unforgettable scenery. From sunrise viewpoints to authentic local cuisine, every
-              day is thoughtfully designed by our expert team to give you the very best experience.
-            </p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{overview}</p>
           </Panel>
 
           <Panel title="Itinerary">
