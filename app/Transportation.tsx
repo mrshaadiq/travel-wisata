@@ -1,18 +1,32 @@
-import { Plus, Bus, Ship, Truck, Car, Users, Pencil, Trash2 } from "lucide-react";
+import { Plus, Bus, Ship, Truck, Car, Users, Pencil, Trash2, Plane } from "lucide-react";
 import { PageHeader } from "../components/shared/PageHeader";
 import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
-import { transports } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
 import { toast } from "sonner";
 
 const typeIcon: Record<string, typeof Bus> = {
-  Minivan: Car, Boat: Ship, Speedboat: Ship, "Off-road": Truck, Bus: Bus,
+  Minivan: Car, Boat: Ship, Speedboat: Ship, "Off-road": Truck, Bus: Bus, Travel: Car, Pesawat: Plane
 };
 
 export function Transportation() {
+  const { transports, loading } = useTravel();
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading transportation fleet...</p>
+        </div>
+      </div>
+    );
+  }
+
   const total = transports.length;
   const available = transports.filter((t) => t.availability === "Available").length;
   const onTrip = transports.filter((t) => t.availability === "On Trip").length;
+
 
   return (
     <>

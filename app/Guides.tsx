@@ -1,10 +1,23 @@
 import { Plus, Star, MapPin, Languages, Pencil } from "lucide-react";
 import { PageHeader } from "../components/shared/PageHeader";
 import { StatusBadge } from "../components/shared/StatusBadge";
-import { guides } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
 import { toast } from "sonner";
 
 export function Guides() {
+  const { guides, loading } = useTravel();
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading guides...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <PageHeader

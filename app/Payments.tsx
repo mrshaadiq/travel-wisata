@@ -8,17 +8,44 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "../components/ui/dialog";
-import { payments, paymentStats, formatIDR } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
+import { formatIDR } from "../lib/data";
 import { destinationImages } from "../lib/images";
 import { toast } from "sonner";
 
 const iconMap = { Wallet, Clock, CheckCircle2, RotateCcw } as const;
 
 export function Payments() {
+  const { payments, refunds, loading } = useTravel();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<typeof payments[number] | null>(null);
 
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading payments...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalRevenue = payments.filter(p => p.status === "Success").reduce((acc, curr) => acc + curr.amount, 0);
+  const pendingRevenue = payments.filter(p => p.status === "Pending").reduce((acc, curr) => acc + curr.amount, 0);
+  const successfulCount = payments.filter(p => p.status === "Success").length;
+  const refundRequestsCount = refunds.length;
+  const refundTotal = refunds.reduce((acc, curr) => acc + curr.amount, 0);
+
+  const paymentStats = [
+    { id: "revenue", label: "Total Revenue", value: totalRevenue >= 1e9 ? "Rp " + (totalRevenue / 1e9).toFixed(1) + "B" : "Rp " + (totalRevenue / 1e6).toFixed(0) + "M", delta: "+18.9%", trend: "up", icon: "Wallet" as const, color: "#22C55E" },
+    { id: "pending", label: "Pending Payments", value: pendingRevenue >= 1e9 ? "Rp " + (pendingRevenue / 1e9).toFixed(1) + "B" : "Rp " + (pendingRevenue / 1e6).toFixed(0) + "M", delta: `${payments.filter(p => p.status === "Pending").length} invoices`, trend: "neutral" as const, icon: "Clock" as const, color: "#F59E0B" },
+    { id: "success", label: "Successful Payments", value: successfulCount.toLocaleString(), delta: "+12.5%", trend: "up" as const, icon: "CheckCircle2" as const, color: "#2563EB" },
+    { id: "refund", label: "Refund Requests", value: refundRequestsCount.toString(), delta: "Rp " + (refundTotal / 1e6).toFixed(0) + "M", trend: "down" as const, icon: "RotateCcw" as const, color: "#EF4444" },
+  ];
+
   const filtered = payments.filter((p) => p.id.toLowerCase().includes(query.toLowerCase()) || p.customer.toLowerCase().includes(query.toLowerCase()));
+
 
   return (
     <>

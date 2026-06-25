@@ -3,20 +3,33 @@ import { Search, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { PageHeader } from "../components/shared/PageHeader";
 import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
-import { activityLogs } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
 import { cn } from "../components/ui/utils";
 
 const statusIcon = { Success: CheckCircle2, Failed: XCircle, Warning: AlertTriangle } as const;
 const statusColor = { Success: "text-green-600 bg-green-100", Failed: "text-red-600 bg-red-100", Warning: "text-amber-600 bg-amber-100" } as const;
 
 export function ActivityLogs() {
+  const { activityLogs, loading } = useTravel();
   const [query, setQuery] = useState("");
   const [user, setUser] = useState("all");
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading activity logs...</p>
+        </div>
+      </div>
+    );
+  }
 
   const users = ["all", ...Array.from(new Set(activityLogs.map((l) => l.user)))];
   const filtered = activityLogs.filter(
     (l) => (l.action.toLowerCase().includes(query.toLowerCase()) || l.module.toLowerCase().includes(query.toLowerCase())) && (user === "all" || l.user === user)
   );
+
 
   return (
     <>

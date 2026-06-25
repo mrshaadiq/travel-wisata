@@ -2,24 +2,39 @@ import { Plus, ChevronLeft, ChevronRight, CalendarClock } from "lucide-react";
 import { PageHeader } from "../components/shared/PageHeader";
 import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
-import { departures } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
 import { toast } from "sonner";
 import { cn } from "../components/ui/utils";
 
 // Build July 2026 grid. July 1 2026 is a Wednesday (index 3).
 const FIRST_WEEKDAY = 3;
 const DAYS_IN_MONTH = 31;
-const departuresByDay = departures.reduce<Record<number, typeof departures>>((acc, d) => {
-  const day = new Date(d.date).getDate();
-  if (new Date(d.date).getMonth() === 6) (acc[day] = acc[day] || []).push(d);
-  return acc;
-}, {});
 
 export function Departures() {
+  const { departures, loading } = useTravel();
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading departures schedule...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const departuresByDay = departures.reduce<Record<number, typeof departures>>((acc, d) => {
+    const day = new Date(d.date).getDate();
+    if (new Date(d.date).getMonth() === 6) (acc[day] = acc[day] || []).push(d);
+    return acc;
+  }, {});
+
   const cells: (number | null)[] = [
     ...Array(FIRST_WEEKDAY).fill(null),
     ...Array.from({ length: DAYS_IN_MONTH }, (_, i) => i + 1),
   ];
+
 
   return (
     <>

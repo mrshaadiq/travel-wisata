@@ -11,10 +11,8 @@ import { StatCard } from "../components/shared/StatCard";
 import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import {
-  dashboardStats, revenueData, bookingTrend, destinationShare,
-  departures, recentActivities, topPackages, bookings, formatIDR, destinations,
-} from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
+import { formatIDR } from "../lib/data";
 import { heroImages } from "../lib/images";
 
 const iconMap = { Users, Ticket, Wallet, Package, Plane, Clock } as const;
@@ -22,9 +20,41 @@ const activityIcon = { booking: Ticket, payment: CreditCard, package: Package, r
 
 export function Dashboard() {
   const router = useRouter();
+  const {
+    dashboardStats,
+    revenueData,
+    bookingTrend,
+    destinationShare,
+    departures,
+    recentActivities,
+    topPackages,
+    destinations,
+    bookings,
+    loading,
+    error
+  } = useTravel();
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading travel dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">Supabase Connection Error:</span>
+            <span>{error.message || "Please configure your .env.local file and ensure database tables are seeded."}</span>
+          </div>
+        </div>
+      )}
       {/* Hero banner */}
       <div className="relative overflow-hidden rounded-2xl bg-slate-900">
         <ImageWithFallback src={heroImages.dashboard} alt="Travel landscape" className="absolute inset-0 size-full object-cover opacity-50" />

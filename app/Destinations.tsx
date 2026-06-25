@@ -6,11 +6,24 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
 } from "../components/ui/dialog";
-import { destinations } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
 import { toast } from "sonner";
 
 export function Destinations() {
+  const { destinations, loading } = useTravel();
   const [open, setOpen] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading destinations...</p>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <>

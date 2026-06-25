@@ -2,13 +2,28 @@ import { RotateCcw, Check, X } from "lucide-react";
 import { PageHeader } from "../components/shared/PageHeader";
 import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
-import { refunds, formatIDR } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
+import { formatIDR } from "../lib/data";
 import { toast } from "sonner";
 
 export function Refunds() {
+  const { refunds, loading } = useTravel();
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading refunds...</p>
+        </div>
+      </div>
+    );
+  }
+
   const pending = refunds.filter((r) => r.status === "Pending").length;
   const approved = refunds.filter((r) => r.status === "Approved").length;
   const total = refunds.reduce((s, r) => s + (r.status === "Approved" ? r.amount : 0), 0);
+
 
   return (
     <>

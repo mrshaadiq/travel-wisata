@@ -4,15 +4,28 @@ import { Download, Search, Eye, Clock, CheckCircle2, CircleCheck, XCircle } from
 import { PageHeader } from "../components/shared/PageHeader";
 import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
-import { bookings, bookingSummary, formatIDR } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
+import { formatIDR } from "../lib/data";
 import { cn } from "../components/ui/utils";
 
 const summaryIcon = { pending: Clock, confirmed: CheckCircle2, completed: CircleCheck, cancelled: XCircle } as const;
 
 export function Bookings() {
   const router = useRouter();
+  const { bookings, bookingSummary, loading } = useTravel();
   const [tab, setTab] = useState("All");
   const [query, setQuery] = useState("");
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading bookings...</p>
+        </div>
+      </div>
+    );
+  }
 
   const tabs = ["All", "Pending", "Confirmed", "Completed", "Cancelled"];
   const filtered = bookings.filter(
@@ -20,6 +33,7 @@ export function Bookings() {
       (tab === "All" || b.status === tab) &&
       (b.id.toLowerCase().includes(query.toLowerCase()) || b.customer.toLowerCase().includes(query.toLowerCase()))
   );
+
 
   return (
     <>

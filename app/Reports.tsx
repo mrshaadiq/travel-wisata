@@ -7,9 +7,7 @@ import { FileText, FileSpreadsheet, FileDown, TrendingUp, Users, Ticket, MapPin 
 import { PageHeader } from "../components/shared/PageHeader";
 import { Panel } from "../components/shared/Panel";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import {
-  revenueData, bookingTrend, customerGrowth, destinationShare, topPackages,
-} from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
 import { cn } from "../components/ui/utils";
 import { toast } from "sonner";
 
@@ -24,7 +22,28 @@ export function Reports() {
   const params = useParams();
   const type = (params?.type as string) || "revenue";
   const router = useRouter();
+  const {
+    revenueData,
+    bookingTrend,
+    customerGrowth,
+    destinationShare,
+    topPackages,
+    loading
+  } = useTravel();
+
   const active = categories.find((c) => c.key === type) ?? categories[0];
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading reports data...</p>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <>
@@ -102,14 +121,19 @@ export function Reports() {
 
         <div className="space-y-6">
           <Panel title="Top Selling Package">
-            <div className="flex items-center gap-3">
-              <ImageWithFallback src={topPackages[3].image} alt={topPackages[3].name} className="size-14 rounded-xl bg-muted object-cover" />
-              <div>
-                <p className="font-semibold text-foreground">{topPackages[3].name}</p>
-                <p className="text-sm text-muted-foreground">{topPackages[3].revenue} · {topPackages[3].sales} sales</p>
+            {topPackages && topPackages.length > 0 ? (
+              <div className="flex items-center gap-3">
+                <ImageWithFallback src={topPackages[0]?.image} alt={topPackages[0]?.name} className="size-14 rounded-xl bg-muted object-cover" />
+                <div>
+                  <p className="font-semibold text-foreground">{topPackages[0]?.name}</p>
+                  <p className="text-sm text-muted-foreground">{topPackages[0]?.revenue} · {topPackages[0]?.sales} sales</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground p-4">No sales recorded yet.</p>
+            )}
           </Panel>
+
           <Panel title="Most Popular Destination">
             <div className="space-y-2.5">
               {destinationShare.slice(0, 4).map((d) => (

@@ -5,7 +5,8 @@ import {
 import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { packages, itinerary, formatIDR, hotels, guides } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
+import { formatIDR, itinerary } from "../lib/data";
 import { destinationImages, avatar } from "../lib/images";
 
 const gallery = [destinationImages.bali, destinationImages.lombok, destinationImages.komodo, destinationImages.yogyakarta];
@@ -21,7 +22,22 @@ export function PackageDetail() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  const pkg = packages.find((p) => p.id === id) ?? packages[0];
+  const { packages, hotels, guides, loading } = useTravel();
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading package details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const pkg = packages.find((p) => p.id === id) || packages[0];
+  if (!pkg) return null;
+
 
   return (
     <>

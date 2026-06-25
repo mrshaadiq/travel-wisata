@@ -3,7 +3,8 @@ import { ArrowLeft, Check, MapPin, Calendar, Users, CreditCard, Printer } from "
 import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { bookings, packages, formatIDR } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
+import { formatIDR } from "../lib/data";
 import { cn } from "../components/ui/utils";
 
 const steps = ["Booked", "Payment", "Confirmed", "Departed", "Completed"];
@@ -12,9 +13,24 @@ export function BookingDetail() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  const b = bookings.find((x) => x.id === id) ?? bookings[0];
-  const pkg = packages.find((p) => p.name === b.package) ?? packages[0];
+  const { bookings, packages, loading } = useTravel();
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading booking details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const b = bookings.find((x) => x.id === id) || bookings[0];
+  if (!b) return null;
+  const pkg = packages.find((p) => p.name === b.package) || packages[0] || { name: b.package, image: "", destination: b.destination, duration: "", category: "", rating: 5, reviews: 0 };
   const currentStep = b.status === "Completed" ? 5 : b.status === "Confirmed" ? 3 : b.status === "Pending" ? 1 : b.status === "Cancelled" ? 1 : 2;
+
 
   return (
     <>

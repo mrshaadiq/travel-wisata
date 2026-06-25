@@ -2,16 +2,12 @@ import type { Metadata } from "next";
 import { Noto_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { cn } from "@/lib/utils";
+import { TravelDataProvider } from "@/hooks/useTravel";
 
-const playfairDisplayHeading = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-heading",
-});
+const playfairDisplayHeading = Playfair_Display({subsets:['latin'],variable:'--font-heading'});
 
-const notoSans = Noto_Sans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
+const notoSans = Noto_Sans({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "TravelGo - Booking Management",
@@ -24,11 +20,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${playfairDisplayHeading.variable} ${notoSans.variable} h-full antialiased`}>
+    <html lang="en" className={cn("h-full", "antialiased", "font-sans", notoSans.variable, playfairDisplayHeading.variable)}>
       <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
-        <DashboardLayout>{children}</DashboardLayout>
+        <TravelDataProvider>
+          <DashboardLayout>{children}</DashboardLayout>
+        </TravelDataProvider>
       </body>
     </html>
   );
 }
-

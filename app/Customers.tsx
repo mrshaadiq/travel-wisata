@@ -9,16 +9,29 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
-import { customers } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
 import { toast } from "sonner";
 
 export function Customers() {
+  const { customers, loading } = useTravel();
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("all");
   const [status, setStatus] = useState("all");
   const [open, setOpen] = useState(false);
 
-  const cities = useMemo(() => ["all", ...Array.from(new Set(customers.map((c) => c.city)))], []);
+  const cities = useMemo(() => ["all", ...Array.from(new Set(customers.map((c) => c.city)))], [customers]);
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading customers...</p>
+        </div>
+      </div>
+    );
+  }
+
 
   const filtered = customers.filter((c) => {
     const q = query.toLowerCase();

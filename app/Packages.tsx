@@ -4,17 +4,30 @@ import { Plus, Download, Star, Clock, Users, MapPin, Eye, Pencil, Trash2 } from 
 import { PageHeader } from "../components/shared/PageHeader";
 import { StatusBadge } from "../components/shared/StatusBadge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { packages, formatIDR } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
+import { formatIDR } from "../lib/data";
 import { toast } from "sonner";
 import { cn } from "../components/ui/utils";
 
-const categories = ["All", "Cultural", "Adventure", "Nature", "Beach"];
-
 export function Packages() {
   const router = useRouter();
+  const { packages, loading } = useTravel();
   const [cat, setCat] = useState("All");
 
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading packages...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const categories = ["All", ...Array.from(new Set(packages.map((p) => p.category)))];
   const list = packages.filter((p) => cat === "All" || p.category === cat);
+
 
   return (
     <>

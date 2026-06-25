@@ -3,7 +3,7 @@ import { PageHeader } from "../components/shared/PageHeader";
 import { Panel } from "../components/shared/Panel";
 import { StatusBadge } from "../components/shared/StatusBadge";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { hotels } from "../lib/data";
+import { useTravel } from "../hooks/useTravel";
 import { toast } from "sonner";
 
 const facilities = [
@@ -14,6 +14,21 @@ const facilities = [
 ];
 
 export function Hotels() {
+  const { hotels, loading } = useTravel();
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading hotels...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (hotels.length === 0) return null;
+
   return (
     <>
       <PageHeader

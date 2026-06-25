@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Bell, Globe, Moon, Sun, Menu, ChevronDown, Settings, User, LogOut } from "lucide-react";
 import { avatar } from "../../lib/images";
+import { createClient } from "../../utils/supabase/client";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -22,6 +23,35 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   const [dark, setDark] = useState(false);
   const [lang, setLang] = useState("EN");
   const router = useRouter();
+  const supabase = createClient();
+  const [profile, setProfile] = useState({ name: "Admin Travel", email: "admin@travelgo.id" });
+
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Query the profile from m_admin table
+        const { data: adminData } = await supabase
+          .from("m_admin")
+          .select("nama_lengkap")
+          .eq("admin_id", user.id)
+          .single();
+
+        setProfile({
+          name: adminData?.nama_lengkap || user.user_metadata?.nama_lengkap || user.email?.split("@")[0] || "User",
+          email: user.email || "",
+        });
+      }
+    }
+    loadProfile();
+  }, [supabase]);
+
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   const toggleTheme = () => {
     const next = !dark;
@@ -96,19 +126,19 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         {/* Profile */}
         <DropdownMenu>
           <DropdownMenuTrigger className="ml-1 flex items-center gap-2 rounded-lg p-1 pr-2 outline-none hover:bg-muted">
-            <img src={avatar("Admin Travel")} alt="Admin" className="size-8 rounded-lg bg-muted" />
+            <img src={avatar(profile.name)} alt="Admin" className="size-8 rounded-lg bg-muted" />
             <ChevronDown className="hidden size-3.5 text-muted-foreground sm:block" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel>
-              <p className="font-semibold">Admin Travel</p>
-              <p className="text-xs font-normal text-muted-foreground">admin@travelgo.id</p>
+              <p className="font-semibold">{profile.name}</p>
+              <p className="text-xs font-normal text-muted-foreground">{profile.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem><User className="size-4" /> My Profile</DropdownMenuItem>
             <DropdownMenuItem onClick={() => router.push("/settings")}><Settings className="size-4" /> Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push("/login")} className="text-red-600 focus:text-red-600">
+            <DropdownMenuItem onClick={handleSignOut} className="text-red-600 focus:text-red-600 cursor-pointer">
               <LogOut className="size-4" /> Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>

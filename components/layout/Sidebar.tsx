@@ -1,14 +1,46 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Plane, LogOut, ChevronsUpDown } from "lucide-react";
 import { navSections } from "../../lib/nav";
 import { avatar } from "../../lib/images";
 import { cn } from "../ui/utils";
+import { createClient } from "../../utils/supabase/client";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+  const [profile, setProfile] = useState({ name: "Admin Travel", role: "Super Admin" });
+
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Query the profile from m_admin table
+        const { data: adminData } = await supabase
+          .from("m_admin")
+          .select("nama_lengkap, role")
+          .eq("admin_id", user.id)
+          .single();
+
+        setProfile({
+          name: adminData?.nama_lengkap || user.user_metadata?.nama_lengkap || user.email?.split("@")[0] || "User",
+          role: adminData?.role || "Administrator",
+        });
+      }
+    }
+    loadProfile();
+  }, [supabase]);
+
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <aside className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
@@ -60,19 +92,19 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       {/* User profile card */}
       <div className="shrink-0 border-t border-sidebar-border p-3">
         <div className="flex items-center gap-3 rounded-xl bg-muted/60 p-2.5">
-          <img src={avatar("Admin Travel")} alt="Admin Travel" className="size-9 rounded-lg bg-card" />
+          <img src={avatar(profile.name)} alt={profile.name} className="size-9 rounded-lg bg-card" />
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-sm font-semibold text-foreground">Admin Travel</p>
-            <p className="truncate text-xs text-muted-foreground">Super Admin</p>
+            <p className="truncate text-sm font-semibold text-foreground">{profile.name}</p>
+            <p className="truncate text-xs text-muted-foreground">{profile.role}</p>
           </div>
           <ChevronsUpDown className="size-4 text-muted-foreground" />
         </div>
-        <Link
-          href="/login"
-          className="mt-1.5 flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
+        <button
+          onClick={handleSignOut}
+          className="mt-1.5 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 text-left"
         >
           <LogOut className="size-[18px]" /> Sign Out
-        </Link>
+        </button>
       </div>
     </aside>
   );

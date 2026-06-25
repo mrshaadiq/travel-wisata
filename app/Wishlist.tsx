@@ -2,16 +2,28 @@ import { Heart, Users, Star, MapPin } from "lucide-react";
 import { PageHeader } from "../components/shared/PageHeader";
 import { Panel } from "../components/shared/Panel";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { packages, customers } from "../lib/data";
-
-// Derived wishlist: which packages customers have saved.
-const wishlist = packages.slice(0, 5).map((p, i) => ({
-  ...p,
-  saves: [142, 98, 256, 73, 51][i],
-  savers: customers.slice(i, i + 4),
-}));
+import { useTravel } from "../hooks/useTravel";
 
 export function Wishlist() {
+  const { packages, customers, loading } = useTravel();
+
+  if (loading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="size-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Loading wishlist...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const wishlist = packages.slice(0, 5).map((p, i) => ({
+    ...p,
+    saves: [142, 98, 256, 73, 51][i] || 10,
+    savers: customers.slice(i, i + 4),
+  }));
+
   return (
     <>
       <PageHeader title="Customer Wishlist" description="See which packages your customers are dreaming about." />
