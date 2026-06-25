@@ -442,8 +442,8 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
       setDestinationShare(generatedDestShare.length > 0 ? generatedDestShare : dummy.destinationShare);
 
       // Customer Growth
-      let cumCust = 0;
       const custMonthCounts: Record<string, number> = {};
+      
       dbPelanggan.forEach((c: any) => {
         if (c.created_at) {
           const date = new Date(c.created_at);
@@ -452,17 +452,22 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
         }
       });
 
+      let cumCust = 0;
       const generatedCustGrowth = monthNames.map((m) => {
         const monthlyCount = custMonthCounts[m] || 0;
-
         cumCust += monthlyCount;
+        
         return {
           month: m,
           customers: cumCust
         };
       });
-      
-      setCustomerGrowth(generatedCustGrowth);
+
+      if (dbPelanggan.length > 0) {
+        setCustomerGrowth(generatedCustGrowth);
+      } else {
+        setCustomerGrowth(dummy.customerGrowth);
+      }
 
       // Top Packages
       const pkgSales: Record<string, { sales: number; revenue: number; image: string }> = {};
