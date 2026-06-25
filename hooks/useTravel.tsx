@@ -445,17 +445,23 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
       let cumCust = 0;
       const custMonthCounts: Record<string, number> = {};
       dbPelanggan.forEach((c: any) => {
-        const date = c.created_at ? new Date(c.created_at) : new Date();
-        const monthStr = monthNames[date.getMonth()];
-        custMonthCounts[monthStr] = (custMonthCounts[monthStr] || 0) + 1;
+        if (c.created_at) {
+          const date = new Date(c.created_at);
+          const monthStr = monthNames[date.getMonth()];
+          custMonthCounts[monthStr] = (custMonthCounts[monthStr] || 0) + 1;
+        }
       });
-      const generatedCustGrowth = monthNames.slice(0, 8).map((m, i) => {
-        cumCust += custMonthCounts[m] || (10 + i * 2);
+
+      const generatedCustGrowth = monthNames.map((m) => {
+        const monthlyCount = custMonthCounts[m] || 0;
+
+        cumCust += monthlyCount;
         return {
           month: m,
-          customers: cumCust + 8000 // base offset to match aesthetic numbers
+          customers: cumCust
         };
       });
+      
       setCustomerGrowth(generatedCustGrowth);
 
       // Top Packages
