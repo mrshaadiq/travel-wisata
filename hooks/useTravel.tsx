@@ -410,22 +410,36 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
 
       // Booking Trend
       const trendDataMap: Record<string, { bookings: number; cancelled: number }> = {};
+      
+      monthNames.forEach((m) => {
+        trendDataMap[m] = { bookings: 0, cancelled: 0 };
+      });
+
       dbBooking.forEach((b: any) => {
+
         const date = b.tanggal_booking ? new Date(b.tanggal_booking) : new Date();
         const monthStr = monthNames[date.getMonth()];
-        if (!trendDataMap[monthStr]) trendDataMap[monthStr] = { bookings: 0, cancelled: 0 };
-        if (b.ref_status_booking?.nama_status === "Cancelled") {
+        
+        const statusName = b.ref_status_booking?.nama_status?.toLowerCase() || "";
+        
+        if (statusName === "cancelled" || statusName === "batal") {
           trendDataMap[monthStr].cancelled++;
         } else {
           trendDataMap[monthStr].bookings++;
         }
       });
-      const generatedBookingTrend = monthNames.slice(0, 8).map((m, i) => ({
+
+      const generatedBookingTrend = monthNames.map((m) => ({
         month: m,
-        bookings: trendDataMap[m]?.bookings || (150 + i * 30),
-        cancelled: trendDataMap[m]?.cancelled || (10 + i * 2)
+        bookings: trendDataMap[m].bookings,
+        cancelled: trendDataMap[m].cancelled
       }));
-      setBookingTrend(generatedBookingTrend);
+
+      if (dbBooking.length > 0) {
+        setBookingTrend(generatedBookingTrend);
+      } else {
+        setBookingTrend(dummy.bookingTrend);
+      }
 
       // Destination Share
       const destCounts: Record<string, number> = {};
