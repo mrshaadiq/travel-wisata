@@ -83,8 +83,8 @@ export function Reports() {
 
   // Perhitungan Nilai Kumulatif & KPI
   const totalRevenue = payments
-    .filter((p) => p.status === "Success" || p.status_bayar === "Success")
-    .reduce((s, p) => s + (p.amount || p.jumlah_bayar || 0), 0);
+    .filter((p) => p.status === "Success")
+    .reduce((s, p) => s + (p.amount || 0), 0);
 
   const totalBookings = bookings.length;
   const totalCustomers = customers.length;
