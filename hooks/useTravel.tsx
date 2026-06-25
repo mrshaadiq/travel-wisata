@@ -438,17 +438,37 @@ export function TravelDataProvider({ children }: { children: React.ReactNode }) 
 
       // Destination Share
       const destCounts: Record<string, number> = {};
-      mappedBookings.forEach(b => {
-        destCounts[b.destination] = (destCounts[b.destination] || 0) + 1;
+      let totalValidBookings = 0;
+
+      mappedBookings.forEach((b) => {
+
+        const destName = b.destination || "Other";
+        
+        destCounts[destName] = (destCounts[destName] || 0) + 1;
+        totalValidBookings++;
       });
-      const totalBookings = mappedBookings.length || 1;
+
       const colors = ["#2563EB", "#0EA5E9", "#F59E0B", "#22C55E", "#8B5CF6", "#EC4899"];
-      const generatedDestShare = Object.keys(destCounts).map((name, i) => ({
-        name,
-        value: Math.round((destCounts[name] / totalBookings) * 100),
-        color: colors[i % colors.length]
-      }));
-      setDestinationShare(generatedDestShare.length > 0 ? generatedDestShare : dummy.destinationShare);
+      
+      const generatedDestShare = Object.keys(destCounts).map((name, i) => {
+        const shareValue = totalValidBookings > 0 
+          ? Math.round((destCounts[name] / totalValidBookings) * 100) 
+          : 0;
+
+        return {
+          name,
+          value: shareValue,
+          color: colors[i % colors.length]
+        };
+      })
+
+      .sort((a, b) => b.value - a.value);
+
+      if (mappedBookings.length > 0) {
+        setDestinationShare(generatedDestShare);
+      } else {
+        setDestinationShare(dummy.destinationShare);
+      }
 
       // Customer Growth
       const custMonthCounts: Record<string, number> = {};
